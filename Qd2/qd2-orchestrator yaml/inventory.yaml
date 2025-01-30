@@ -24,7 +24,7 @@ all:
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin    
+      py_env: /usr/bin
     testbed-qd2node-5:
       ansible_host: 10.4.48.63
       ansible_connection: ssh
