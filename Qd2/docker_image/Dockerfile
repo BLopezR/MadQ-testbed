@@ -1,8 +1,8 @@
 FROM ubuntu:22.04
 
 # Actualiza el sistema e instala sudo
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \    
-nano sudo openssh-server iproute2 iputils-ping tcpdump traceroute psmisc
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    nano sudo openssh-server iproute2 iputils-ping tcpdump traceroute psmisc
 RUN groupadd -g 1000 ubuntu
 RUN useradd -d /home/ubuntu -s /bin/bash -m ubuntu -u 1000 -g 1000 && echo "ubuntu:ubuntu" | chpasswd && adduser ubuntu sudo
 
