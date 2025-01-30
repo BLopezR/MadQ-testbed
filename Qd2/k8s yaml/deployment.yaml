@@ -13,14 +13,14 @@ spec:
         app: kme
     spec:
       containers:
-        - name: kme-container
-          image: buchillo/testbed-kme-qd2:latest
-          imagePullPolicy: Always
-          workingDir: /usr/src/app
-          securityContext:
-            capabilities:
-              add:
-                - "NET_ADMIN"
+      - name: kme-container
+        image: buchillo/testbed-kme-qd2:latest
+        imagePullPolicy: Always
+        workingDir: /usr/src/app
+        securityContext:
+          capabilities:
+            add:
+            - "NET_ADMIN"
 ---
 apiVersion: v1
 kind: Service
@@ -31,15 +31,19 @@ spec:
   selector:
     app: kme
   ports:
-    - port: 65431
-      targetPort: 65431
-      nodePort: 30001
-    - port: 65433
-      targetPort: 65433
-      nodePort: 30003
-      - port: 65435
-      targetPort: 65435
-      nodePort: 30005
-      - port: 31942
-      targetPort: 31942
-      nodePort: 30002
+  - name: ksid-port
+    port: 65431
+    targetPort: 65431
+    nodePort: 30001
+  - name: etekey-port
+    port: 65433
+    targetPort: 65433
+    nodePort: 30003
+  - name: httpserver-port
+    port: 65435
+    targetPort: 65435
+    nodePort: 30005
+  - name: qd2client-port
+    port: 31942
+    targetPort: 31942
+    nodePort: 30002
