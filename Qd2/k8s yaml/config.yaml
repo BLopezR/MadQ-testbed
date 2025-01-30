@@ -1,0 +1,51 @@
+---
+quditto_version: 0.1.0
+config:
+  application_interface: etsi-gs-qkd-004
+  qkd_protocol: e91
+nodes:
+  - node_name: testbed-qd2node-1
+    node_ip: 10.4.48.209
+    neighbour_nodes: 
+      - testbed-qd2node-2
+      - testbed-qd2node-3
+
+  - node_name: testbed-qd2node-2
+    node_ip: 10.4.48.171
+    neighbour_nodes: 
+      - testbed-qd2node-1
+      - testbed-qd2node-5 
+
+  - node_name: testbed-qd2node-3
+    node_ip: 10.4.48.121
+    neighbour_nodes: 
+      - testbed-qd2node-1
+      - testbed-qd2node-4
+      - testbed-qd2node-5
+
+  - node_name: testbed-qd2node-4
+    node_ip: 10.4.48.181
+    neighbour_nodes: 
+      - testbed-qd2node-3
+      - testbed-qd2node-5
+      - testbed-qd2node-6
+
+  - node_name: testbed-qd2node-5
+    node_ip: 10.4.48.63
+    neighbour_nodes: 
+      - testbed-qd2node-2
+      - testbed-qd2node-3
+      - testbed-qd2node-4
+      - testbed-qd2node-7
+
+  - node_name: testbed-qd2node-6
+    node_ip: 10.4.48.117
+    neighbour_nodes: 
+      - testbed-qd2node-4
+      - testbed-qd2node-7
+  
+  - node_name: testbed-qd2node-7
+    node_ip: 10.4.48.139
+    neighbour_nodes: 
+      - testbed-qd2node-5
+      - testbed-qd2node-6

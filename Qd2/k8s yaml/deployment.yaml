@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kme
+  template:
+    metadata:
+      labels:
+        app: kme
+    spec:
+      containers:
+        - name: kme-container
+          image: buchillo/testbed-kme-qd2:latest
+          imagePullPolicy: Always
+          workingDir: /usr/src/app
+          securityContext:
+            capabilities:
+              add:
+                - "NET_ADMIN"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kme-servicio
+spec:
+  type: NodePort
+  selector:
+    app: kme
+  ports:
+    - port: 65431
+      targetPort: 65431
+      nodePort: 30001
+    - port: 65433
+      targetPort: 65433
+      nodePort: 30003
+      - port: 65435
+      targetPort: 65435
+      nodePort: 30005
+      - port: 31942
+      targetPort: 31942
+      nodePort: 30002
