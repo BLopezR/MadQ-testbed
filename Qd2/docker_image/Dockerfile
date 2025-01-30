@@ -30,4 +30,4 @@ RUN pip3 install --user "onetimepad"
 
 WORKDIR /home/ubuntu
 
-CMD bash
+CMD ["tail", "-f", "/dev/null"]
