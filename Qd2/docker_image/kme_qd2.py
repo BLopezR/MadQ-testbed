@@ -12,20 +12,20 @@ qclient = Client004()
 size = 16
 
 kme_name = "kme-"
-ip = "10.4."
+ip = "10.244.0."
+mv_ip = "10.4.32."
 
-# Clave: IP del KME. Valores: IP del qnode, nombre de la app, (en el caso de que el KME sea intermedio) la IP del
+# Clave: IP de la MV del KME. Valores: IP del qnode, nombre de la app, ip del KME anterior y la IP del
 # KME en el siguiente salto
 dic_ips = {
-    "": ["10.4.32.207", "app1@qd2node1"],
-    "": ["10.4.32.121", "app2@qd2node2", "10.4.32.144"],
-    "": ["10.4.32.106", "app3@qd2node3", "10.4.32.227"],
-    "": ["10.4.32.124", "app4@qd2node4", "10.4.32.236"],
-    "": ["10.4.32.107", "app5@qd2node5"]
+    "10.4.32.221": ["10.4.32.207", "app1@testbed-qd2node-1", "10.4.32.96"],
+    "10.4.32.96": ["10.4.32.121", "app2@testbed-qd2node-2", "10.4.32.221", "10.4.32.144"],
+    "10.4.32.144": ["10.4.32.106", "app3@testbed-qd2node-3", "10.4.32.96", "10.4.32.227"],
+    "10.4.32.227": ["10.4.32.124", "app4@testbed-qd2node-4", "10.4.32.144", "10.4.32.236"],
+    "10.4.32.236": ["10.4.32.107", "app5@testbed-qd2node-5", "10.4.32.227"]
 }
 
-
-qclient.connect(dic_ips[ip][0])
+qclient.connect(dic_ips[mv_ip][0])
 
 new_ksid = threading.Event()
 change_path = threading.Event()
@@ -33,7 +33,6 @@ received_ete = threading.Event()
 
 def ksid_socket():
     global prev_ksid
-    global previous_kme_ip
     global size
     global dst
 
@@ -42,7 +41,6 @@ def ksid_socket():
         s.listen()
         while True:
             conn, addr = s.accept()
-            previous_kme_ip = addr[0]
             with conn:
                 print(f"Connected by {addr}")
                 recibiendo = True
@@ -74,7 +72,6 @@ def key_socket():
 class MyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         global end_to_end
-        global previous_kme_ip
 
         parsed_path = urlparse(self.path) #In theory, the url request must follow the ETSI 014 standard, an example would be: http://KME_IP/api/v1/keys/APP_ID/enc_keys?src=SRC_kme_name&dst=DST_kme_name&size=16
         path_list = parsed_path[2].split("/")
@@ -88,7 +85,7 @@ class MyHandler(BaseHTTPRequestHandler):
 
         if src == ip: #Case in which the application made the request to the "first" KME 
             end_to_end = secrets.token_bytes(size) #Initial KME has to create the end-to-end key
-            next_kme_ip = "10.4."
+            next_kme_ip = dic_ips[mv_ip][2]
 
             #Start key stream with the next KME
             response = qclient.open_connect("app1@qd2node1", "app2@qd2node2", key_chunk_size=size, ttl=100000, ksid=None)
@@ -141,9 +138,9 @@ def forwarding_ete():
 
     while True:
         new_ksid.wait()
-
+        previous_kme_ip = dic_ips[mv_ip][2]
         # Obtain common key with previous kme
-        response = qclient.open_connect(dic_ips[previous_kme_ip][1],  dic_ips[ip][1], key_chunk_size=size, ttl=100000, ksid=prev_ksid)
+        response = qclient.open_connect(dic_ips[previous_kme_ip][1],  dic_ips[mv_ip][1], key_chunk_size=size, ttl=100000, ksid=prev_ksid)
         print("Key stream response with previous kme: ", response)
         while True:
             response = qclient.get_key(prev_ksid)
@@ -155,9 +152,9 @@ def forwarding_ete():
         # Receive encrypted end to end key from previous kme
         received_ete.wait() 
         end_to_end = bytes.fromhex(onetimepad.decrypt(end_to_end_encrypted, key1.hex()))
-        next_kme = dic_ips[ip][2]
+        next_kme = dic_ips[mv_ip][3]
         # Connect with next qnode
-        response = qclient.open_connect(dic_ips[ip][1], dic_ips[next_kme][1], key_chunk_size=size, ttl=100000, ksid=None)
+        response = qclient.open_connect(dic_ips[mv_ip][1], dic_ips[next_kme][1], key_chunk_size=size, ttl=100000, ksid=None)
         ksid2 = response["ksid"]
         print("Key stream response with next kme: ", response)
         #Send the key stream ID to the next KME
@@ -194,7 +191,7 @@ if __name__=="__main__":
     
 
     if kme_name=="kme-1" or kme_name=="kme-5": # if kme is an end one
-        http_host = dic_ips[kme_name][0] #tiene que ser la IP con la APP
+        http_host = ip
         http_port = 65435
         webServer = HTTPServer((http_host, http_port), MyHandler)
         http_server_thread = threading.Thread(target=webServer.serve_forever())
