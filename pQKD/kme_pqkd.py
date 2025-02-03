@@ -3,8 +3,14 @@ import threading
 import requests
 import json
 
-# API URL
+"""Esto ahora mismo está de forma que en la prueba se tiene que hacer la petición a Bob y luego
+hacer el get key with ID a Alice. Habría que generalizarlo para que se le pudiese hacer a cualquiera. 
+Pero no sé bien cómo hacer esta trampa. Puede ser con las IPs de los KMEs que así sepan con quien están
+conectados o algo nose"""
+
+# API URLs
 API_URL = "https://10.4.32.43:8082/api/v1/keys/AliceSAE/enc_keys"
+API_URL_KSID = "https://10.4.32.42:8082/api/v1/keys/BobSAE/dec_keys?key_ID="
 
 # Certificate and private key
 CERT = ("qbck-client.crt", "qbck-client-decrypted.key")
@@ -14,11 +20,13 @@ CA_CERT = "qbck-ca.crt"
 HOST = "0.0.0.0"
 PORT = 65432  # Change if needed
 
-def get_key_from_pqkd():
-    """Retreives a key from the remote API."""
+def get_key_from_pqkd(ksid = None):
+    """Retrieves a key from the remote API, using different endpoints based on request type."""
     try:
+        url = API_URL_KSID + ksid if ksid else API_URL
+        
         # Make GET request
-        response = requests.get(API_URL, cert=CERT, verify=CA_CERT)
+        response = requests.get(url, cert=CERT, verify=CA_CERT)
         response.raise_for_status()  # Raise error for bad response
 
         # Parse response JSON
@@ -26,7 +34,7 @@ def get_key_from_pqkd():
         key = response_json['keys'][0]['key']
         ksid = response_json['keys'][0]['key_ID']
 
-        print(f"Retreived key: {key}")
+        print(f"Retrieved key: {key}")
         print(f"Key ID: {ksid}")
 
         return key, ksid
@@ -47,13 +55,13 @@ def key_socket():
             conn, addr = s.accept()
             with conn:
                 print(f"Connection from {addr}")
-
-                # Retrieve key when a request is received
-                retreiving = True
-                while retreiving:
-                    key, ksid = get_key_from_pqkd()
-                    retreiving = False
-
+                
+                # Receive data from client
+                data = conn.recv(1024).decode()
+                ksid = data if data else None
+                
+                key, ksid = get_key_from_pqkd(ksid=ksid)
+                
                 if key and ksid:
                     response_data = json.dumps({"key": key, "ksid": ksid})
                     conn.sendall(response_data.encode())
@@ -69,4 +77,3 @@ if __name__ == "__main__":
         server_thread.join()
     except KeyboardInterrupt:
         print("\nServer shutting down.")
-
