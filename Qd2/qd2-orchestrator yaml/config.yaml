@@ -4,48 +4,48 @@ config:
   application_interface: etsi-gs-qkd-004
   qkd_protocol: e91
 nodes:
-  - node_name: testbed-qd2node-1
+  - node_name: qnode1
     node_ip: 10.4.32.207
     neighbour_nodes:
-      - testbed-qd2node-2
-      - testbed-qd2node-3
+      - qnode2
+      - qnode3
 
-  - node_name: testbed-qd2node-2
+  - node_name: qnode2
     node_ip: 10.4.32.121
     neighbour_nodes:
-      - testbed-qd2node-1
-      - testbed-qd2node-5
+      - qnode1
+      - qnode5
 
-  - node_name: testbed-qd2node-3
+  - node_name: qnode3
     node_ip: 10.4.32.106
     neighbour_nodes:
-      - testbed-qd2node-1
-      - testbed-qd2node-4
-      - testbed-qd2node-5
+      - qnode1
+      - qnode4
+      - qnode5
 
-  - node_name: testbed-qd2node-4
+  - node_name: qnode4
     node_ip: 10.4.32.124
     neighbour_nodes:
-      - testbed-qd2node-3
-      - testbed-qd2node-5
-      - testbed-qd2node-6
+      - qnode3
+      - qnode5
+      - qnode6
 
-  - node_name: testbed-qd2node-5
+  - node_name: qnode5
     node_ip: 10.4.32.107
     neighbour_nodes:
-      - testbed-qd2node-2
-      - testbed-qd2node-3
-      - testbed-qd2node-4
-      - testbed-qd2node-7
+      - qnode2
+      - qnode3
+      - qnode4
+      - qnode7
 
-  - node_name: testbed-qd2node-6
+  - node_name: qnode6
     node_ip: 10.4.32.252
     neighbour_nodes:
-      - testbed-qd2node-4
-      - testbed-qd2node-7
+      - qnode4
+      - qnode7
 
-  - node_name: testbed-qd2node-7
+  - node_name: qnode7
     node_ip: 10.4.32.153
     neighbour_nodes:
-      - testbed-qd2node-5
-      - testbed-qd2node-6
+      - qnode5
+      - qnode6
