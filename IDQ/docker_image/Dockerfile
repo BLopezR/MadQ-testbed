@@ -26,6 +26,7 @@ RUN sudo apt-get update && \
 ENV PATH="/home/ubuntu/.local/bin:${PATH}"
 
 RUN pip3 install --user "flask"
+RUN pip3 install --user "requests"
 
 WORKDIR /home/ubuntu
 
