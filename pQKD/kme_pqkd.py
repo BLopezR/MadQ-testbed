@@ -1,79 +1,55 @@
-import socket
-import threading
 import requests
-import json
+from flask import Flask, request, jsonify
 
-"""Esto ahora mismo está de forma que en la prueba se tiene que hacer la petición a Bob y luego
-hacer el get key with ID a Alice. Habría que generalizarlo para que se le pudiese hacer a cualquiera. 
-Pero no sé bien cómo hacer esta trampa. Puede ser con las IPs de los KMEs que así sepan con quien están
-conectados o algo nose"""
+# Hay que instalar flask, requests
 
-# API URLs
-API_URL = "https://10.4.32.43:8082/api/v1/keys/AliceSAE/enc_keys"
-API_URL_KSID = "https://10.4.32.42:8082/api/v1/keys/BobSAE/dec_keys?key_ID="
+app = Flask(__name__)
 
-# Certificate and private key
-CERT = ("qbck-client.crt", "qbck-client-decrypted.key")
-CA_CERT = "qbck-ca.crt"
+# Mapping of KME IPs to corresponding pQKD IPs
+KME_TO_DEVICE_MAP = {
+    "10.4.33.41": "10.4.32.42",  # Alice, KME 1
+    "10.4.33.75": "10.4.32.43"   # Bob, KME extra
+}
 
-# Server settings
-HOST = "0.0.0.0"
-PORT = 65432  # Change if needed
+# Server configuration
+PORT = 65431
 
-def get_key_from_pqkd(ksid = None):
-    """Retrieves a key from the remote API, using different endpoints based on request type."""
+# Flask expects a route with this format and when it gets one, it extracts target and action
+# Action refers to either encrypt (when petition is get_key) or decrypt (when petition is 
+# get_ket_with_id)
+@app.route("/api/v1/keys/<path:full_path>", methods=["GET"])
+def forward_request(full_path):
+    """
+    Receives any request to /api/v1/keys/* and forwards it to the correct external device.
+    Keeps the same path and query parameters, only changing the IP.
+    """
+
+    # Get the IP of the KME (the server's own IP)
+    kme_ip = request.host.split(":")[0]  # Extract IP from the request URL
+    print(f"Received request at KME {kme_ip} for path: {full_path} with params: {request.args}")
+
+    # Check if the KME IP is recognized
+    if kme_ip not in KME_TO_DEVICE_MAP:
+        return jsonify({"error": "Unrecognized KME IP"}), 400
+
+    # Get the pQKD's IP
+    pqkd_ip = KME_TO_DEVICE_MAP[kme_ip]
+    base_url = f"http://{pqkd_ip}:8082/api/v1/keys/{full_path}"
+    query_string = "&".join([f"{key}={value}" for key, value in request.args.items()])
+    target_url = f"{base_url}?{query_string}" if query_string else base_url  # Only add "?" if there are parameters
+
+    print(f"Forwarding request to: {target_url}")  # Debugging output
+
     try:
-        url = API_URL_KSID + ksid if ksid else API_URL
-        
-        # Make GET request
-        response = requests.get(url, cert=CERT, verify=CA_CERT)
-        response.raise_for_status()  # Raise error for bad response
+        # Forward the request with all query parameters
+        response = requests.get(target_url)
+        response.raise_for_status()
 
-        # Parse response JSON
-        response_json = response.json()
-        key = response_json['keys'][0]['key']
-        ksid = response_json['keys'][0]['key_ID']
-
-        print(f"Retrieved key: {key}")
-        print(f"Key ID: {ksid}")
-
-        return key, ksid
+        # Return the external response to the client
+        return jsonify(response.json())
 
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching key: {e}")
-        return None, None
-
-def key_socket():
-    """Socket server that listens for key requests."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind((HOST, PORT))
-        s.listen()
-
-        print(f"Key server running on {HOST}:{PORT}")
-
-        while True:
-            conn, addr = s.accept()
-            with conn:
-                print(f"Connection from {addr}")
-                
-                # Receive data from client
-                data = conn.recv(1024).decode()
-                ksid = data if data else None
-                
-                key, ksid = get_key_from_pqkd(ksid=ksid)
-                
-                if key and ksid:
-                    response_data = json.dumps({"key": key, "ksid": ksid})
-                    conn.sendall(response_data.encode())
-                else:
-                    conn.sendall(b"Error: Failed to retrieve key.")
+        return jsonify({"error": f"External request failed: {str(e)}"}), 500
 
 if __name__ == "__main__":
-    # Start server thread
-    server_thread = threading.Thread(target=key_socket, daemon=True)
-    server_thread.start()
-
-    try:
-        server_thread.join()
-    except KeyboardInterrupt:
-        print("\nServer shutting down.")
+    app.run(host="0.0.0.0", port=PORT)  # Running with SSL
