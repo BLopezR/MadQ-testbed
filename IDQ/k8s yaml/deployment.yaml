@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: idq-kme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: idq-kme
+  template:
+    metadata:
+      labels:
+        app: idq-kme
+    spec:
+      containers:
+      - name: idq-kme-container
+        image: buchillo/testbed-kme-idq:latest
+        imagePullPolicy: Always
+        workingDir: /home/ubuntu
+        securityContext:
+          capabilities:
+            add:
+            - "NET_ADMIN"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: idq-kme-servicio
+spec:
+  type: NodePort
+  selector:
+    app: idq-kme
+  ports:
+  - name: idq-kme-port
+    port: 5000
+    targetPort: 5000
+    nodePort: 30006
