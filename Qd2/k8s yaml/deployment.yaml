@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kme
+  name: qd2-kme
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kme
+      app: qd2-kme
   template:
     metadata:
       labels:
-        app: kme
+        app: qd2-kme
     spec:
       containers:
-      - name: kme-container
+      - name: qd2-kme-container
         image: buchillo/testbed-kme-qd2:latest
         imagePullPolicy: Always
         workingDir: /usr/src/app
