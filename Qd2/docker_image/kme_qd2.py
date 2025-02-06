@@ -105,6 +105,7 @@ class MyHandler(BaseHTTPRequestHandler):
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((next_kme_ip, 30003))
                 s.sendall(bytes.fromhex(end_to_end_encrypted))
+            received_ete.wait()
 
         elif dst == mv_ip: #Case in which the application made the request to the "last" KME
             #Wait for a ksid
@@ -121,6 +122,10 @@ class MyHandler(BaseHTTPRequestHandler):
             #Wait for the encrypted end-to-end key
             received_ete.wait()
             end_to_end = bytes.fromhex(onetimepad.decrypt(end_to_end_encrypted, key.hex()))
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect(("10.4.32.221", 30003))
+                s.sendall(bytes.fromhex(end_to_end_encrypted))
+
 
             #Send response to the application
         self.send_response(200)
