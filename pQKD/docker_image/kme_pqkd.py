@@ -12,7 +12,7 @@ KME_TO_DEVICE_MAP = {
 }
 
 # Server configuration
-PORT = 65431
+PORT = 5000
 
 # Flask expects a route with this format and when it gets one, it extracts target and action
 # Action refers to either encrypt (when petition is get_key) or decrypt (when petition is 
