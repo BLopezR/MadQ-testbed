@@ -6,40 +6,40 @@ all:
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode2:
       ansible_host: 10.4.48.171
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode3:
       ansible_host: 10.4.48.121
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode4:
       ansible_host: 10.4.48.181
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode5:
       ansible_host: 10.4.48.63
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode6:
       ansible_host: 10.4.48.117
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
     qnode7:
       ansible_host: 10.4.48.139
       ansible_connection: ssh
       ansible_user: ubuntu
       ansible_ssh_pass: ubuntu
-      py_env: /usr/bin
+      py_env: /home/ubuntu/.local/lib/python3.10
