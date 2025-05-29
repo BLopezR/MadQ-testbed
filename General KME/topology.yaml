@@ -1,0 +1,85 @@
+blue:
+  node1:
+    elements:
+      pqkd1: ["10.4.32.42", "BobSAE"]
+      qd21: ["10.4.32.207", "qnode3", "qnode4"]
+      kme1: ["10.4.48.236"]
+    neighbours:
+      node2: pqkd1
+      node3: qd21
+      node4: qd21
+
+  node2:
+    elements:
+      pqkd2: ["10.4.32.43", "AliceSAE"]
+      pqkd3: ["pqkd3_ip", "SAE"]
+      kme2: ["10.4.48.248"]
+    neighbours:
+      node1: pqkd2
+
+  node3:
+    elements:
+      pqkd4: ["pqkd4_ip", "SAE"]
+      qd22: ["10.4.32.121", "qnode1", "qnode6"]
+      kme3: ["10.4.48.57"]
+    neighbours:
+      node1: qd22
+      node6: qd22
+
+orange:
+  node4:
+    elements:
+      qd23: ["10.4.32.106", "qnode1", "qnode5", "qnode6"]
+      kme4: ["10.4.48.118"]
+    neighbours:
+      node1: qd23
+      node5: qd23
+      node6: qd23
+
+  node5:
+    elements:
+      qd24: ["10.4.32.124", "qnode4", "qnode6", "qnode7"]
+      kme5: ["10.4.48.112"]
+    neighbours:
+      node4: qd24
+      node6: qd24
+      node7: qd24
+
+  node6:
+    elements:
+      qd25: ["10.4.32.107", "qnode3", "qnode4", "qnode5", "qnode8"]
+      kme6: ["10.4.48.135"]
+    neighbours:
+      node3: qd25
+      node4: qd25
+      node5: qd25
+      node8: qd25
+
+black:
+  node7:
+    elements:
+      idq1: ["10.4.32.11", "CONSBT"]
+      qd26: ["10.4.32.252", "qnode5", "qnode6"]
+      kme7: ["10.4.48.95"]
+    neighbours:
+      node5: qd26
+      node8: qd26
+
+  node8:
+    elements:
+      idq2: ["10.4.32.12", "CONSAT"]
+      qd27: ["10.4.32.153", "qnode6", "qnode7"]
+      kme8: ["10.4.48.205"]
+    neighbours:
+      node6: qd27
+      node7: qd27
+
+  # node9 is transparent and currently commented out
+  # node9:
+  #   elements:
+  #     idq3: ["idq3_ip", "CONS"]
+  #     idq4: ["idq4_ip:443"]
+  #     kme9: ["ip_kme9"]
+  #   neighbours:
+  #     node7: idq3
+  #     node8: idq4
