@@ -28,28 +28,37 @@ for color_group in dic_ips.values():
                 break
 
 #Specific information
-#hostname = socket.gethostbyname()
-#my_node = "node"+hostname[3]
-my_node = "node"
+hostname = socket.gethostbyname()
+my_node = "node"+hostname[4]
 my_ip = kme_dic[my_node]
-my_color = next((color for color, nodes in dic_ips.items() if my_node in nodes), None)
 
 #Threaded ecosystem
-
 thread_local = threading.local()
 
 #Graph of the network to choose paths
-G = nx.Graph()
-for color_group in dic_ips.values():
-    for node, properties in color_group.items():
-        G.add_node(node)
+G = nx.MultiGraph()
 
-# Then, add edges based on neighbours:
+# Add nodes
+for color, nodes in dic_ips.items():
+    for node in nodes:
+        G.add_node(node, color=color)
+
+# Add edges with domain info
 for color_group in dic_ips.values():
     for node, properties in color_group.items():
-        for neighbour in properties["neighbours"]:
-            if neighbour in G: 
-                G.add_edge(node, neighbour)
+        for neighbor in properties["neighbours"]:
+            if neighbor in G:
+                G.add_edge(node, neighbor, interdomain=(G.nodes[node]["color"] != G.nodes[neighbor]["color"]))
+
+my_color = G.nodes[my_node]["color"]
+neighbor_colors_function = lambda G, target_color: {
+    G.nodes[nbr]["color"]
+    for node in G.nodes
+    if G.nodes[node]["color"] == target_color
+    for nbr in G.neighbors(node)
+    if G.nodes[nbr]["color"] != target_color
+}
+neighbor_colors = neighbor_colors_function(G, my_color)
 
 #Sockets for receiving information
 reply_queues = {}
@@ -78,6 +87,7 @@ def next_hop_information_handler(conn, addr):
         petition_id = data[0]
         next_hop = data[1]
         size = data[2]
+        dst = data[3]
         print(f'Information received: \npetition id: {petition_id}\nnext hop: {next_hop}\nsize: {size}')
         thread_local.q = Queue()
         thread_local.q_id = petition_id
@@ -85,7 +95,7 @@ def next_hop_information_handler(conn, addr):
         print(f"Queue {petition_id} created")
         queue_created.set()
         if size != 0:
-            fwd_thread = threading.Thread(target=midle_actor, args=(petition_id, next_hop, size, thread_local.q), daemon=True)
+            fwd_thread = threading.Thread(target=midle_actor, args=(petition_id, next_hop, size, dst, thread_local.q), daemon=True)
             print("Starting middle actor thread")
             fwd_thread.start()
 
@@ -127,7 +137,7 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class MyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
 
-        parsed_path = urlparse(self.path) #The url request must follow the ETSI 014 standard, an example would be: http://KME_IP/api/v1/keys/enc_keys?src=SRC_kme_name&dst=DST_kme_name&size=16&id=8271
+        parsed_path = urlparse(self.path) #The url request must follow the ETSI 014 standard, an example would be: http://KME_IP/api/v1/keys/enc_keys?src=SRC_node&dst=DST_node&size=16&id=8271
         request_param = parsed_path[4].split("&")
         src = [item.split("=")[1] for item in request_param if item.startswith("src")]
         dst = [item.split("=")[1] for item in request_param if item.startswith("dst")]
@@ -135,7 +145,7 @@ class MyHandler(BaseHTTPRequestHandler):
         id= [item.split("=")[1] for item in request_param if item.startswith("id")]
         print(f"Key request received. Request soruce: {src[0]}, request destination: {dst[0]}, key size: {size}, id: {id[0]}")
 
-        #Right now you only one src and one dst is supported
+        #Right now only one src and one dst is supported
         if my_node == src[0]:
             ete_key = initial_actor(src[0], dst[0], size[0], id[0])
             print("Starting initial actor thread")
@@ -153,14 +163,25 @@ class MyHandler(BaseHTTPRequestHandler):
         self.wfile.write(response_content)
 
 def initial_actor(src, dst, sz, id):
-
     ete_key = secrets.token_bytes(sz)
-    choice = nx.shortest_path(G, source=src, target=dst) 
+    
+    choice = nx.shortest_path(G, source=src, target=dst) #Se computa el camino completo pero solo se utiliza el mismo color + una frontera
+    cropped = [choice[0]]
+    for node in choice[1:]:
+        node_color = G.nodes[node]['color']
+        print(node, node_color)
+        if node_color == my_color:
+            cropped.append(node)
+        else:
+            cropped.append(node)  # allow ending on the first different color
+            break
+
     chosen_path = OrderedDict({
         node: kme_dic[node]
-        for node in choice[1:] 
+        for node in cropped[1:] 
         if node in kme_dic
     })
+    
     print(f"Chosen path: {chosen_path}")
     my_next_hop = chosen_path.popitem(last=False)
     my_device = dic_ips[my_color][my_node]["neighbours"][my_next_hop[0]]
@@ -168,7 +189,7 @@ def initial_actor(src, dst, sz, id):
     for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((next_hop[1], 65432))
-            data_hop = [id, [item for item in hop], sz]
+            data_hop = [id, [item for item in hop], sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
             time.sleep(1)
@@ -176,7 +197,7 @@ def initial_actor(src, dst, sz, id):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((next_hop[1], 65432))
-            data_hop = [id, [], 0]
+            data_hop = [id, None, sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
 
@@ -198,6 +219,7 @@ def initial_actor(src, dst, sz, id):
         first_key_info = data["keys"][0]
         key = first_key_info["key"].encode()
         key_ID = first_key_info["key_ID"]
+
     ete_key_encripted = onetimepad.encrypt(ete_key.hex(), key.hex())
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s: #Sends the KSID and the end to end key encripted to the next hop
@@ -209,7 +231,7 @@ def initial_actor(src, dst, sz, id):
         s.sendall(data_send)
     return ete_key
 
-def midle_actor(petition_id, next_hop, size, reply_q):
+def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
     
     prev_ksid, ete_key_encripted, prev_node_ip_middle = reply_q.get()
        
@@ -240,7 +262,42 @@ def midle_actor(petition_id, next_hop, size, reply_q):
     dec_hex = onetimepad.decrypt(ete_key_encripted, key.hex())
     ete_key = bytes.fromhex(dec_hex)
 
-    my_device = dic_ips[my_color][my_node]["neighbours"][next_hop[0]]
+    if my_next_hop == None:
+        choice = nx.shortest_path(G, source=my_node, target=dst) #Se computa el camino completo pero solo se utiliza el mismo color + una frontera
+        cropped = [choice[0]]
+        for node in choice[1:]:
+            node_color = G.nodes[node]['color']
+            print(node, node_color)
+            if node_color == my_color:
+                cropped.append(node)
+            else:
+                cropped.append(node)  # allow ending on the first different color
+                break
+
+        chosen_path = OrderedDict({
+            node: kme_dic[node]
+            for node in cropped[1:] 
+            if node in kme_dic
+        })
+        my_next_hop = chosen_path.popitem(last=False)
+        my_device = dic_ips[my_color][my_node]["neighbours"][my_next_hop[0]]
+        next_hop = my_next_hop
+        for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((next_hop[1], 65432))
+                data_hop = [id, [item for item in hop], size, dst]
+                data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
+                s.sendall(data_hop_send)
+                time.sleep(1)
+            next_hop = hop
+
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.connect((next_hop[1], 65432))
+                    data_hop = [id, None, size, dst]
+                    data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
+                    s.sendall(data_hop_send)
+
+    my_device = dic_ips[my_color][my_node]["neighbours"][my_next_hop[0]]
 
     if my_device.startswith("pqkd"):
             print(f"Requesting key from {my_device}")
@@ -266,7 +323,7 @@ def midle_actor(petition_id, next_hop, size, reply_q):
     ete_key_encripted = onetimepad.encrypt(ete_key.hex(), key.hex())
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((next_hop[1], 65431))
+        s.connect((my_next_hop[1], 65431))
         data = [petition_id, key_ID, ete_key_encripted]
         data_send = json.dumps(data).encode('utf-8')+b'\n'
         s.sendall(data_send)
