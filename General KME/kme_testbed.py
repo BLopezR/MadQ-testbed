@@ -237,7 +237,7 @@ def initial_actor(src, dst, sz):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s: #Sends the KSID and the end to end key encripted to the next hop
         print(f'Sending the ete_key encripted to {my_next_hop}')
         s.connect((my_next_hop[1], 65431))
-        data = [id, key_ID, ete_key_encripted]
+        data = [ete_key_id, key_ID, ete_key_encripted]
         data_send = json.dumps(data).encode('utf-8')+b'\n'
         s.sendall(data_send)
     return ete_key, ete_key_id
@@ -378,7 +378,7 @@ def retrieve_key(key_id):
     else:
         ete_key = None
 
-    return ete_key
+    return ete_key, key_id
 
 
 if __name__=="__main__":
