@@ -95,13 +95,13 @@ def next_hop_information_handler(conn, addr):
         thread_local.q_id = petition_id
         reply_queues[petition_id] = thread_local.q
         print(f"Queue {petition_id} created")
-        queue_created.set()
+
         if dst != my_node:
             fwd_thread = threading.Thread(target=midle_actor, args=(petition_id, next_hop, size, dst, thread_local.q), daemon=True)
             print("Starting middle actor thread")
             fwd_thread.start()
         else: 
-            end_thread = threading.Thread(target=end_actor, args=(size, thread_local.q), daemon=True)
+            end_thread = threading.Thread(target=end_actor, args=(petition_id, size, thread_local.q), daemon=True)
             print("Starting end actor thread")
             end_thread.start()
 
