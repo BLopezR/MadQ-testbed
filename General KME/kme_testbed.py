@@ -123,7 +123,7 @@ def prev_hop_information_handler(conn, prev_node):
         petition_id = data[0]
         prev_ksid = data[1]
         ete_key_encripted = data[2]
-        print(f'Informaiton received: \nkey ID: {prev_ksid}\nete_key encripted: {ete_key_encripted}')
+        print(f'Information received: \nkey ID: {prev_ksid}\nete_key encripted: {ete_key_encripted}')
         q = reply_queues.get(petition_id)
         if q:
             q.put((prev_ksid, ete_key_encripted, prev_node[0]))
@@ -285,17 +285,17 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
         for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((next_hop[1], 65432))
-                data_hop = [id, [item for item in hop], size, dst]
+                data_hop = [petition_id, [item for item in hop], size, dst]
                 data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
                 s.sendall(data_hop_send)
                 time.sleep(1)
             next_hop = hop
 
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.connect((next_hop[1], 65432))
-                    data_hop = [id, None, size, dst]
-                    data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
-                    s.sendall(data_hop_send)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((next_hop[1], 65432))
+                data_hop = [petition_id, None, size, dst]
+                data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
+                s.sendall(data_hop_send)
 
     my_device = dic_ips[my_color][my_node]["neighbours"][my_next_hop[0]]
 
@@ -309,7 +309,7 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
 
     elif my_device.startswith("qd2"):
             print(f"Requesting key from {my_device}")
-            key_0, key_ID = get_key_qd2(dic=dic_ips, device=my_device, neighbour=next_hop[0], size=size, KSID=None)
+            key_0, key_ID = get_key_qd2(dic=dic_ips, device=my_device, neighbour=my_next_hop[0], size=size, KSID=None)
             key = key_0.encode()
 
     elif my_device.startswith("idq"):

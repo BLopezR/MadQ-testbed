@@ -12,31 +12,7 @@ nodes:
   - node_name: qnode1
     node_ip: 10.4.32.207
     neighbour_nodes:
-      - name: qnode2
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
       - name: qnode3
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
-
-  - node_name: qnode2
-    node_ip: 10.4.32.121
-    neighbour_nodes:
-      - name: qnode1
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
-      - name: qnode5
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
-
-  - node_name: qnode3
-    node_ip: 10.4.32.106
-    neighbour_nodes:
-      - name: qnode1
         link_length: 20
         protocol: bb84
         eavesdropper: False
@@ -44,15 +20,23 @@ nodes:
         link_length: 20
         protocol: bb84
         eavesdropper: False
-      - name: qnode5
+
+  - node_name: qnode3
+    node_ip: 10.4.32.121
+    neighbour_nodes:
+      - name: qnode1
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
+      - name: qnode6
         link_length: 20
         protocol: bb84
         eavesdropper: False
 
   - node_name: qnode4
-    node_ip: 10.4.32.124
+    node_ip: 10.4.32.106
     neighbour_nodes:
-      - name: qnode3
+      - name: qnode1
         link_length: 20
         protocol: bb84
         eavesdropper: False
@@ -66,17 +50,13 @@ nodes:
         eavesdropper: False
 
   - node_name: qnode5
-    node_ip: 10.4.32.107
+    node_ip: 10.4.32.124
     neighbour_nodes:
-      - name: qnode2
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
-      - name: qnode3
-        link_length: 20
-        protocol: bb84
-        eavesdropper: False
       - name: qnode4
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
+      - name: qnode6
         link_length: 20
         protocol: bb84
         eavesdropper: False
@@ -86,25 +66,45 @@ nodes:
         eavesdropper: False
 
   - node_name: qnode6
-    node_ip: 10.4.32.252
+    node_ip: 10.4.32.107
     neighbour_nodes:
+      - name: qnode3
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
       - name: qnode4
         link_length: 20
         protocol: bb84
         eavesdropper: False
-      - name: qnode7
+      - name: qnode5
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
+      - name: qnode8
         link_length: 20
         protocol: bb84
         eavesdropper: False
 
   - node_name: qnode7
-    node_ip: 10.4.32.153
+    node_ip: 10.4.32.252
     neighbour_nodes:
       - name: qnode5
         link_length: 20
         protocol: bb84
         eavesdropper: False
+      - name: qnode8
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
+
+  - node_name: qnode8
+    node_ip: 10.4.32.153
+    neighbour_nodes:
       - name: qnode6
+        link_length: 20
+        protocol: bb84
+        eavesdropper: False
+      - name: qnode7
         link_length: 20
         protocol: bb84
         eavesdropper: False
