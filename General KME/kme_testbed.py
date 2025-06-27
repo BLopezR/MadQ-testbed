@@ -28,7 +28,7 @@ for color_group in dic_ips.values():
                 break
 
 #Specific information
-hostname = socket.gethostbyname()
+hostname = socket.gethostname()
 my_node = "node"+hostname[4]
 my_ip = kme_dic[my_node]
 
