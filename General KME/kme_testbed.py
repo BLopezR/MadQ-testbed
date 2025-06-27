@@ -3,7 +3,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from socketserver import ThreadingMixIn
 import time
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import secrets
 import threading
 import networkx as nx 
@@ -26,6 +26,8 @@ for color_group in dic_ips.values():
             if key.startswith("kme"):
                 kme_dic[node] = value[0]
                 break
+
+keys_dic = {}
 
 #Specific information
 hostname = socket.gethostname()
@@ -94,10 +96,14 @@ def next_hop_information_handler(conn, addr):
         reply_queues[petition_id] = thread_local.q
         print(f"Queue {petition_id} created")
         queue_created.set()
-        if size != 0:
+        if dst != my_node:
             fwd_thread = threading.Thread(target=midle_actor, args=(petition_id, next_hop, size, dst, thread_local.q), daemon=True)
             print("Starting middle actor thread")
             fwd_thread.start()
+        else: 
+            end_thread = threading.Thread(target=end_actor, args=(size, thread_local.q), daemon=True)
+            print("Starting end actor thread")
+            end_thread.start()
 
 def prev_hop_information_socket():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -137,33 +143,39 @@ class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class MyHandler(BaseHTTPRequestHandler):
     def do_GET(self):
 
-        parsed_path = urlparse(self.path) #The url request must follow the ETSI 014 standard, an example would be: http://KME_IP/api/v1/keys/enc_keys?src=SRC_node&dst=DST_node&size=16&id=8271
-        request_param = parsed_path[4].split("&")
-        src = [item.split("=")[1] for item in request_param if item.startswith("src")]
-        dst = [item.split("=")[1] for item in request_param if item.startswith("dst")]
-        size = [int(s.split("=")[1]) for s in [item for item in request_param if item.startswith("size")]]
-        id= [item.split("=")[1] for item in request_param if item.startswith("id")]
-        print(f"Key request received. Request soruce: {src[0]}, request destination: {dst[0]}, key size: {size}, id: {id[0]}")
+        parsed_path = urlparse(self.path) #The url request must follow the ETSI 014 standard, an example would be: http://KME_IP/api/v1/keys/enc_keys?src=SRC_node&dst=DST_node&size=16
+                                          #or http://KME_IP/api/v1/keys/dec_keys?src=SRC_node&dst=DST_node&key_ID=947529
+        request_params = parse_qs(parsed_path.query)
+        src = request_params.get("src", [None])[0]
+        dst = request_params.get("dst", [None])[0]
+        size = request_params.get("size", [None])[0]
+        key_id = request_params.get("key_id", [None])[0]
+        print(f"Key request received. Request parameters: {request_params}")
 
-        #Right now only one src and one dst is supported
-        if my_node == src[0]:
-            ete_key = initial_actor(src[0], dst[0], size[0], id[0])
-            print("Starting initial actor thread")
+        if parsed_path.path.endswith("/enc_keys") and size and not key_id:
+            print("Detected enc_keys request → launching initial_actor")
+            ete_key, ete_key_id = initial_actor(src, dst, int(size))
 
-        elif my_node == dst[0]:
-                ete_key = end_actor(size[0], id[0])
-                print('Starting end actor thread')
+        elif parsed_path.path.endswith("/dec_keys") and key_id and not size:
+            print("Detected dec_keys request → launching end_actor")
+            ete_key, ete_key_id = retrieve_key(key_id)
 
-        response_ete = base64.b64encode(ete_key).decode('ascii')
-        response_content = json.dumps({"key": response_ete}).encode('utf-8')
+        if ete_key:
+            response_ete = base64.b64encode(ete_key).decode('ascii')
+            response_content = json.dumps({"key": response_ete, "key_ID": ete_key_id}).encode('utf-8')
+        
+        else:
+            response_content = json.dumps({"There has been an error"}).encode('utf-8')
         self.send_response(200)
         self.send_header("Content-type", "application/json")
         self.send_header("Content-Length", str(len(response_content)))
         self.end_headers()
         self.wfile.write(response_content)
 
-def initial_actor(src, dst, sz, id):
+
+def initial_actor(src, dst, sz):
     ete_key = secrets.token_bytes(sz)
+    ete_key_id = str(uuid.uuid4())
     
     choice = nx.shortest_path(G, source=src, target=dst) #Se computa el camino completo pero solo se utiliza el mismo color + una frontera
     cropped = [choice[0]]
@@ -189,7 +201,7 @@ def initial_actor(src, dst, sz, id):
     for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((next_hop[1], 65432))
-            data_hop = [id, [item for item in hop], sz, dst]
+            data_hop = [ete_key_id, [item for item in hop], sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
             time.sleep(1)
@@ -197,7 +209,7 @@ def initial_actor(src, dst, sz, id):
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((next_hop[1], 65432))
-            data_hop = [id, None, sz, dst]
+            data_hop = [ete_key_id, None, sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
 
@@ -227,9 +239,8 @@ def initial_actor(src, dst, sz, id):
         s.connect((my_next_hop[1], 65431))
         data = [id, key_ID, ete_key_encripted]
         data_send = json.dumps(data).encode('utf-8')+b'\n'
-
         s.sendall(data_send)
-    return ete_key
+    return ete_key, ete_key_id
 
 def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
     
@@ -328,10 +339,8 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
         data_send = json.dumps(data).encode('utf-8')+b'\n'
         s.sendall(data_send)
 
-def end_actor(sz, id):
-    queue_created.wait()
-    queue_created.clear()
-    reply_q = reply_queues.get(id)
+def end_actor(ete_key_id, size, reply_q):
+    global keys_dic
     prev_ksid, ete_key_encripted, prev_node_ip = reply_q.get()
 
     prev_node = next((key for key, val in kme_dic.items() if val == prev_node_ip), None)
@@ -339,7 +348,7 @@ def end_actor(sz, id):
 
     if my_device.startswith("pqkd"):
         print(f"Requesting key from {my_device}")
-        response = get_key_pqkd(dic=dic_ips, device=my_device, size=sz, KSID=prev_ksid)
+        response = get_key_pqkd(dic=dic_ips, device=my_device, size=size, KSID=prev_ksid)
         data = json.loads(response.decode('utf-8'))
         first_key_info = data["keys"][0]
         key = first_key_info["key"].encode()
@@ -347,12 +356,12 @@ def end_actor(sz, id):
 
     elif my_device.startswith("qd2"):
         print(f"Requesting key from {my_device}")
-        key_0, key_ID = get_key_qd2(dic=dic_ips, device=my_device, neighbour=prev_node, size=sz, KSID=prev_ksid)
+        key_0, key_ID = get_key_qd2(dic=dic_ips, device=my_device, neighbour=prev_node, size=size, KSID=prev_ksid)
         key = key_0.encode()
 
     elif my_device.startswith("idq"):
         print(f"Requesting key from {my_device}")
-        response = get_key_idq(dic=dic_ips, device=my_device, size=sz, KSID=prev_ksid)
+        response = get_key_idq(dic=dic_ips, device=my_device, size=size, KSID=prev_ksid)
         data = json.loads(response.decode('utf-8'))
         first_key_info = data["keys"][0]
         key = first_key_info["key"].encode()
@@ -360,8 +369,17 @@ def end_actor(sz, id):
     
     dec_hex = onetimepad.decrypt(ete_key_encripted, key.hex())
     ete_key = bytes.fromhex(dec_hex)
+    keys_dic[ete_key_id] = ete_key
+
+def retrieve_key(key_id):
+    if key_id in keys_dic:
+        ete_key = keys_dic[key_id]
+    
+    else:
+        ete_key = None
 
     return ete_key
+
 
 if __name__=="__main__":
 
