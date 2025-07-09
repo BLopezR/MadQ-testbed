@@ -25,9 +25,11 @@ RUN sudo apt-get update && \
 # Añade .local/bin/ al PATH
 ENV PATH="/home/ubuntu/.local/bin:${PATH}"
 
-RUN pip3 install --user "qd2_client"
+RUN pip3 install --user "flask"
 RUN pip3 install --user "onetimepad"
 RUN pip3 install --user "networkx"
+RUN pip3 install --user "PyYAML"
+RUN pip3 install --user "requests"
 
 WORKDIR /home/ubuntu
 

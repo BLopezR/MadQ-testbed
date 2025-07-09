@@ -32,7 +32,7 @@ keys_dic = {}
 #Specific information
 hostname = socket.gethostname()
 my_node = "node"+hostname[4]
-my_ip = kme_dic[my_node]
+my_ip = socket.gethostbyname(hostname)
 
 #Threaded ecosystem
 thread_local = threading.local()
@@ -200,7 +200,7 @@ def initial_actor(src, dst, sz):
     next_hop = my_next_hop
     for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((next_hop[1], 65432))
+            s.connect((next_hop[1], 30003))
             data_hop = [ete_key_id, [item for item in hop], sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
@@ -208,7 +208,7 @@ def initial_actor(src, dst, sz):
         next_hop = hop
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((next_hop[1], 65432))
+            s.connect((next_hop[1], 30003))
             data_hop = [ete_key_id, None, sz, dst]
             data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
             s.sendall(data_hop_send)
@@ -236,7 +236,7 @@ def initial_actor(src, dst, sz):
     
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s: #Sends the KSID and the end to end key encripted to the next hop
         print(f'Sending the ete_key encripted to {my_next_hop}')
-        s.connect((my_next_hop[1], 65431))
+        s.connect((my_next_hop[1], 30001))
         data = [ete_key_id, key_ID, ete_key_encripted]
         data_send = json.dumps(data).encode('utf-8')+b'\n'
         s.sendall(data_send)
@@ -295,7 +295,7 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
         next_hop = my_next_hop
         for hop in chosen_path.items(): #Src KME sends to every KME in the path its next hop
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((next_hop[1], 65432))
+                s.connect((next_hop[1], 30003))
                 data_hop = [petition_id, [item for item in hop], size, dst]
                 data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
                 s.sendall(data_hop_send)
@@ -303,7 +303,7 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
             next_hop = hop
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((next_hop[1], 65432))
+                s.connect((next_hop[1], 30003))
                 data_hop = [petition_id, None, size, dst]
                 data_hop_send = json.dumps(data_hop).encode('utf-8')+b'\n'
                 s.sendall(data_hop_send)
@@ -334,7 +334,7 @@ def midle_actor(petition_id, my_next_hop, size, dst, reply_q):
     ete_key_encripted = onetimepad.encrypt(ete_key.hex(), key.hex())
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.connect((my_next_hop[1], 65431))
+        s.connect((my_next_hop[1], 30001))
         data = [petition_id, key_ID, ete_key_encripted]
         data_send = json.dumps(data).encode('utf-8')+b'\n'
         s.sendall(data_send)

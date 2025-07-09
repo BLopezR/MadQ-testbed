@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kme
+  template:
+    metadata:
+      labels:
+        app: kme
+    spec:
+      containers:
+      - name: kme
+        image: buchillo/testbed-general-kme:latest
+        imagePullPolicy: Always
+        workingDir: /home/ubuntu
+        securityContext:
+          capabilities:
+            add:
+            - "NET_ADMIN"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kme-servicio
+spec:
+  type: NodePort
+  externalTrafficPolicy: Local
+  selector:
+    app: kme
+  ports:
+  - name: ksid-port
+    port: 65431
+    targetPort: 65431
+    nodePort: 30001
+  - name: next-hop-port
+    port: 65432
+    targetPort: 65432
+    nodePort: 30003
+  - name: httpserver-port
+    port: 65435
+    targetPort: 65435
+    nodePort: 30005
+
